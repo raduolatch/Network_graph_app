@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 import random
 from pathlib import Path
 
-# ─── PAGE CONFIG ─────────────────────────────────────────────────────────────
+#PAGE CONFIG
 st.set_page_config(
     page_title="Network Graph Analyzer",
     page_icon="🕸️",
@@ -19,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ─── INJECT CSS ──────────────────────────────────────────────────────────────
+#INJECT CSS
 def load_css(path: str):
     with open(path) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
@@ -28,7 +28,7 @@ load_css("style.css")
 
 
 
-# ─── HELPER: RENDER METRIC CARD ──────────────────────────────────────────────
+#HELPER: RENDER METRIC CARD
 def metric_card(value, label, delta=None):
     delta_html = f'<div class="metric-delta">▲ {delta}</div>' if delta else ""
     st.markdown(f"""
@@ -40,7 +40,7 @@ def metric_card(value, label, delta=None):
     """, unsafe_allow_html=True)
 
 
-# ─── HELPER: GENERATE RANDOM GRAPH ───────────────────────────────────────────
+#HELPER: GENERATE RANDOM GRAPH
 def generate_graph(n_nodes: int, n_edges: int, graph_type: str) -> nx.Graph:
     if graph_type == "Random (Erdős–Rényi)":
         p = (2 * n_edges) / (n_nodes * (n_nodes - 1)) if n_nodes > 1 else 0
@@ -56,7 +56,7 @@ def generate_graph(n_nodes: int, n_edges: int, graph_type: str) -> nx.Graph:
     return G
 
 
-# ─── HELPER: PLOTLY NETWORK VISUALIZATION ─────────────────────────────────────
+#HELPER: PLOTLY NETWORK VISUALIZATION
 def plot_network(G: nx.Graph, layout: str, color_by: str) -> go.Figure:
     # Layout
     layout_funcs = {
@@ -136,15 +136,13 @@ def plot_network(G: nx.Graph, layout: str, color_by: str) -> go.Figure:
     return fig
 
 
-# ═════════════════════════════════════════════════════════════════════════════
 #  SIDEBAR
-# ═════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
-    st.image("logo.png", width=80)  # sesuaikan nama file & ukurannya
+    st.image("logo.png", width=80)
     st.markdown('<div class="sidebar-logo-text">Network Graph Analyzer</div>', unsafe_allow_html=True)
 
-    # ── Graph Source ──────────────────────────────────────────────────────────
-    st.markdown('<div class="sidebar-section">// Data Source</div>', unsafe_allow_html=True)
+    # Graph Source 
+    st.markdown('<div class="sidebar-section">Data Source</div>', unsafe_allow_html=True)
     data_source = st.selectbox(
         "Input Type",
         ["Generate Random Graph", "Upload Edge List (.csv)", "Paste Edge Data"],
@@ -168,8 +166,8 @@ with st.sidebar:
             label_visibility="collapsed",
         )
 
-    # ── Graph Config ──────────────────────────────────────────────────────────
-    st.markdown('<div class="sidebar-section">// Graph Config</div>', unsafe_allow_html=True)
+    #Graph Config 
+    st.markdown('<div class="sidebar-section">Graph Config</div>', unsafe_allow_html=True)
 
     if data_source == "Generate Random Graph":
         graph_type = st.selectbox(
@@ -184,15 +182,15 @@ with st.sidebar:
 
     directed = st.toggle("Directed Graph", value=False)
 
-    # ── Visualization ─────────────────────────────────────────────────────────
-    st.markdown('<div class="sidebar-section">// Visualization</div>', unsafe_allow_html=True)
+    # Visualization 
+    st.markdown('<div class="sidebar-section">Visualization</div>', unsafe_allow_html=True)
     layout_algo = st.selectbox("Layout Algorithm", ["Spring", "Circular", "Kamada-Kawai", "Spectral"])
     color_by = st.selectbox("Color Nodes By", ["Degree", "Betweenness", "Uniform"])
 
     st.markdown("<br>", unsafe_allow_html=True)
     run_btn = st.button("⚡  Analyze Graph", use_container_width=True)
 
-    # ── Info ──────────────────────────────────────────────────────────────────
+    # Info 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""
     <div style="font-size:0.65rem; color:#4b5563; font-family:'Space Mono',monospace; line-height:1.8;">
@@ -202,12 +200,9 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-
-# ═════════════════════════════════════════════════════════════════════════════
-#  MAIN CONTENT
-# ═════════════════════════════════════════════════════════════════════════════
-
-# ── Header ────────────────────────────────────────────────────────────────────
+#MAIN CONTENT
+#--------------------------------------------------------------------
+# Header 
 col_logo, col_title = st.columns([1, 8])
 with col_logo:
     st.image("logo.png", width=60)
@@ -215,11 +210,11 @@ with col_title:
     st.markdown("""
     <div>
         <div class="nga-title">Network Graph Analyzer</div>
-        <div class="nga-subtitle">// TOPOLOGY · CENTRALITY · PATH ANALYSIS</div>
+        <div class="nga-subtitle"> TOPOLOGY · CENTRALITY · PATH ANALYSIS</div>
     </div>
     """, unsafe_allow_html=True)
 
-# ── Build Graph ───────────────────────────────────────────────────────────────
+# Build Graph
 G = None
 
 if run_btn or "graph" in st.session_state:
@@ -251,7 +246,7 @@ elif "graph" in st.session_state:
     G = st.session_state["graph"]
 
 
-# ── No Graph Yet ──────────────────────────────────────────────────────────────
+#No Graph Yet 
 if G is None:
     st.markdown("""
     <div style="
@@ -272,7 +267,7 @@ if G is None:
     st.stop()
 
 
-# ── Compute Stats ─────────────────────────────────────────────────────────────
+#Compute Stats
 n = G.number_of_nodes()
 e = G.number_of_edges()
 density = round(nx.density(G), 4)
@@ -300,8 +295,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Metric Row ────────────────────────────────────────────────────────────────
-st.markdown('<div class="section-label">// Graph Metrics</div>', unsafe_allow_html=True)
+#Metric Row
+st.markdown('<div class="section-label">Graph Metrics</div>', unsafe_allow_html=True)
 c1, c2, c3, c4, c5, c6 = st.columns(6)
 with c1: metric_card(n, "Nodes")
 with c2: metric_card(e, "Edges")
@@ -312,12 +307,12 @@ with c6: metric_card(components, "Components")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── TABS ──────────────────────────────────────────────────────────────────────
+# TABS
 tab1, tab2, tab3, tab4 = st.tabs(["📡  Graph View", "📊  Centrality", "🔍  Node Explorer", "📋  Data"])
 
-# ─── TAB 1: Graph Visualization ───────────────────────────────────────────────
+#TAB 1: Graph Visualization
 with tab1:
-    st.markdown('<div class="section-label">// Network Visualization</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">Network Visualization</div>', unsafe_allow_html=True)
     fig = plot_network(G, layout_algo, color_by)
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
@@ -342,9 +337,9 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-# ─── TAB 2: Centrality ────────────────────────────────────────────────────────
+#TAB 2: Centrality
 with tab2:
-    st.markdown('<div class="section-label">// Centrality Analysis</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">Centrality Analysis</div>', unsafe_allow_html=True)
 
     with st.spinner("Computing centrality..."):
         deg_centrality = nx.degree_centrality(G)
@@ -419,9 +414,9 @@ with tab2:
 
     st.dataframe(cent_df, use_container_width=True, height=280)
 
-# ─── TAB 3: Node Explorer ─────────────────────────────────────────────────────
+#  TAB 3: Node Explorer 
 with tab3:
-    st.markdown('<div class="section-label">// Node Explorer</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">Node Explorer</div>', unsafe_allow_html=True)
 
     node_list = list(G.nodes())
     selected_node = st.selectbox("Select a Node", node_list, key="node_sel")
@@ -478,9 +473,9 @@ with tab3:
                 )
                 st.plotly_chart(fig_ego, use_container_width=True, config={"displayModeBar": False})
 
-# ─── TAB 4: Data ──────────────────────────────────────────────────────────────
+#TAB 4: Data 
 with tab4:
-    st.markdown('<div class="section-label">// Raw Graph Data</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">Raw Graph Data</div>', unsafe_allow_html=True)
 
     col_d1, col_d2 = st.columns(2)
     with col_d1:
@@ -499,7 +494,7 @@ with tab4:
             st.download_button("⬇ Download Degree CSV", csv_deg, "degree.csv", "text/csv")
 
     # Degree distribution histogram
-    st.markdown('<div class="section-label" style="margin-top:1rem;">// Degree Distribution Histogram</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label" style="margin-top:1rem;">Degree Distribution Histogram</div>', unsafe_allow_html=True)
     deg_vals = [d for _, d in G.degree()]
     fig_hist = go.Figure(go.Histogram(
         x=deg_vals, nbinsx=30,

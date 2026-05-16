@@ -124,7 +124,7 @@ html, body, [class*="css"] {
     font-family: var(--font-mono) !important;
 }
 
-/* ===== SECTION HEADERS ===== */
+/* ===== SECTION HEADERS (main content) ===== */
 .section-label {
     font-family: var(--font-mono) !important;
     font-size: 0.68rem;
@@ -214,13 +214,18 @@ html, body, [class*="css"] {
     text-transform: uppercase;
     margin-top: 6px;
 }
+
+/* ===== SIDEBAR SECTION HEADERS ===== */
 .sidebar-section {
     font-family: var(--font-mono) !important;
     font-size: 0.62rem;
     letter-spacing: 2px;
-    color: var(--accent);
+    color: var(--text-muted);
     text-transform: uppercase;
-    margin: 1.2rem 0 0.6rem 0;
+    margin: 1.4rem 0 0.5rem 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+    display: block;
 }
 
 /* ===== STREAMLIT WIDGET OVERRIDES ===== */
