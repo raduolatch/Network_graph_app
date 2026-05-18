@@ -1,70 +1,135 @@
-import matplotlib.pyplot as plt
 import networkx as nx
+import plotly.graph_objects as go
 
-def draw_network_graph(G, shortest_path=None, node_color="#3498db", edge_color="#bdc3c7", highlight_color="#e74c3c"):
+def plot_network_with_shortest_path(G: nx.Graph, layout: str, color_by: str, shortest_path=None) -> go.Figure:
     """
-    Fungsi untuk menggambar network graph dengan NetworkX dan Matplotlib.
-    
-    Parameters:
-    - G (nx.Graph): Objek graph dari NetworkX.
-    - shortest_path (list): List of nodes yang membentuk jalur terpendek (opsional).
-    - node_color (str): Warna default untuk node.
-    - edge_color (str): Warna default untuk edge.
-    - highlight_color (str): Warna untuk highlight node/edge pada shortest path.
-    
-    Returns:
-    - fig (matplotlib.figure.Figure): Objek figure untuk ditampilkan di Streamlit.
+    Fungsi visualisasi graph menggunakan Plotly, mendukung highlight Shortest Path 
+    dan menampilkan bobot (weight) pada edge jika tersedia.
     """
-    # 1. Mengatur ukuran figure
-    fig, ax = plt.subplots(figsize=(10, 8))
-    
-    # 2. Mengatur posisi graph agar rapi (menggunakan Spring Layout)
-    # k mengatur jarak antar node, seed memastikan posisi konsisten setiap di-render
-    pos = nx.spring_layout(G, k=0.5, seed=42)
-    
-    # 3. Menentukan warna node berdasarkan shortest path
-    node_colors = []
-    for node in G.nodes():
-        if shortest_path and node in shortest_path:
-            node_colors.append(highlight_color)
-        else:
-            node_colors.append(node_color)
-            
-    # 4. Menentukan warna dan ketebalan edge berdasarkan shortest path
-    edge_colors = []
-    edge_widths = []
-    
-    # Buat set pasangan node dalam shortest path untuk pencarian yang cepat (dua arah)
+    # 1. Alokasi Algoritma Layout Posisi
+    layout_funcs = {
+        "Spring": nx.spring_layout,
+        "Circular": nx.circular_layout,
+        "Kamada-Kawai": nx.kamada_kawai_layout,
+        "Spectral": nx.spectral_layout,
+    }
+    pos = layout_funcs.get(layout, nx.spring_layout)(G, seed=42)
+
+    # 2. Logika Pewarnaan Node Berdasarkan Centrality / Pilihan User
+    if color_by == "Degree":
+        degrees = dict(G.degree())
+        max_deg = max(degrees.values()) if degrees else 1
+        node_colors = [degrees[n] / max_deg for n in G.nodes()]
+    elif color_by == "Betweenness":
+        bc = nx.betweenness_centrality(G)
+        node_colors = [bc[n] for n in G.nodes()]
+    else:
+        node_colors = [0.5] * G.number_of_nodes()
+
+    # Overwrite warna node jika masuk dalam Shortest Path
+    if shortest_path:
+        # 1.0 mewakili ujung atas warna (di colorscale kita atur jadi warna kontras, misal merah)
+        node_colors = [1.0 if n in shortest_path else node_colors[i] for i, n in enumerate(G.nodes())]
+
+    # 3. Logika Pembuatan Edges (Garis & Bobot)
+    # Membuat set pasang node dalam shortest path untuk pencarian instan O(1)
     path_edges = set()
     if shortest_path:
         for i in range(len(shortest_path) - 1):
-            u, v = shortest_path[i], shortest_path[i+1]
-            path_edges.add((u, v))
-            path_edges.add((v, u)) # Antisipasi jika graph tidak berarah
-            
-    for u, v in G.edges():
-        if (u, v) in path_edges:
-            edge_colors.append(highlight_color)
-            edge_widths.append(3.0)  # Lebih tebal untuk highlight
-        else:
-            edge_colors.append(edge_color)
-            edge_widths.append(1.5)  # Ketebalan standar
+            path_edges.add((shortest_path[i], shortest_path[i+1]))
+            path_edges.add((shortest_path[i+1], shortest_path[i]))
 
-    # 5. Menggambar Node dan Edge
-    nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=600, ax=ax)
-    nx.draw_networkx_edges(G, pos, edge_color=edge_colors, width=edge_widths, ax=ax)
+    # Kita pecah menjadi dua trace agar ketebalan & warna garis terpendek bisa dibedakan
+    edge_x, edge_y = [], []
+    sp_edge_x, sp_edge_y = [], []
     
-    # 6. Menampilkan Label Node
-    nx.draw_networkx_labels(G, pos, font_size=10, font_weight="bold", font_color="white", ax=ax)
-    
-    # 7. Menampilkan Bobot Edge (Weight)
-    # Mengambil attribute 'weight' dari setiap edge jika ada
-    edge_labels = nx.get_edge_attributes(G, 'weight')
-    if edge_labels:
-        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=9, ax=ax)
+    # Untuk menyimpan teks posisi bobot di tengah garis (Edge Labels)
+    edge_label_x, edge_label_y, edge_label_text = [], [], []
+
+    for u, v, data in G.edges(data=True):
+        x0, y0 = pos[u]
+        x1, y1 = pos[v]
         
-    # Menghilangkan axis Matplotlib agar tampilan bersih
-    ax.axis('off')
-    plt.tight_layout()
+        # Cek apakah edge dilewati shortest path
+        if (u, v) in path_edges:
+            sp_edge_x += [x0, x1, None]
+            sp_edge_y += [y0, y1, None]
+        else:
+            edge_x += [x0, x1, None]
+            edge_y += [y0, y1, None]
+            
+        # Ambil bobot (weight) jika ada untuk dijadikan label di tengah garis
+        if 'weight' in data:
+            edge_label_x.append((x0 + x1) / 2)
+            edge_label_y.append((y0 + y1) / 2)
+            edge_label_text.append(str(data['weight']))
+
+    # Trace 1: Edge Standar
+    edge_trace = go.Scatter(
+        x=edge_x, y=edge_y,
+        mode="lines",
+        line=dict(width=1.0, color="rgba(0,245,196,0.15)"),
+        hoverinfo="none",
+    )
+
+    # Trace 2: Edge Shortest Path (Di-highlight lebih tebal)
+    sp_edge_trace = go.Scatter(
+        x=sp_edge_x, y=sp_edge_y,
+        mode="lines",
+        line=dict(width=3.5, color="#ff6b6b"),  # Warna merah kontras matching dengan tema neon
+        hoverinfo="none",
+    )
     
+    # Trace 3: Label Bobot Edge (Menggunakan mode markers dengan opacity 0 agar hanya teks yang terlihat)
+    edge_label_trace = go.Scatter(
+        x=edge_label_x, y=edge_label_y,
+        mode="markers+text",
+        text=edge_label_text,
+        textposition="middle center",
+        textfont=dict(size=9, color="#00f5c4", family="Space Mono"),
+        marker=dict(opacity=0),
+        hoverinfo="none"
+    )
+
+    # 4. Logika Pembuatan Nodes
+    node_x = [pos[n][0] for n in G.nodes()]
+    node_y = [pos[n][1] for n in G.nodes()]
+    node_text = [f"Node {n}<br>Degree: {G.degree(n)}" for n in G.nodes()]
+    degrees_list = [G.degree(n) for n in G.nodes()]
+
+    node_trace = go.Scatter(
+        x=node_x, y=node_y,
+        mode="markers",
+        hoverinfo="text",
+        text=node_text,
+        marker=dict(
+            showscale=True,
+            colorscale=[[0, "#7c5cfc"], [0.5, "#00f5c4"], [1, "#ff6b6b"]], # 1.0 otomatis jadi merah
+            color=node_colors,
+            size=[8 + d * 2 for d in degrees_list],
+            colorbar=dict(
+                thickness=12,
+                title=dict(text=color_by, font=dict(color="#6b7280", size=11)),
+                tickfont=dict(color="#6b7280", size=9),
+                bgcolor="rgba(0,0,0,0)",
+                bordercolor="rgba(0,245,196,0.2)",
+            ),
+            line=dict(width=1, color="rgba(0,245,196,0.4)"),
+        ),
+    )
+
+    # 5. Gabungkan semua ke objek Figure Plotly
+    fig = go.Figure(
+        data=[edge_trace, sp_edge_trace, edge_label_trace, node_trace],
+        layout=go.Layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(17,24,39,0.95)",
+            showlegend=False,
+            hovermode="closest",
+            margin=dict(b=10, l=10, r=10, t=10),
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            font=dict(family="Space Mono, monospace", color="#6b7280"),
+        ),
+    )
     return fig
